@@ -36,7 +36,7 @@ _SHUTDOWN = const(12)
 _DISPLAYTEST = const(15)
 
 class Matrix8x8:
-    def __init__(self, spi, cs, num, format=framebuf.MONO_HLSB):
+    def __init__(self, spi, cs, num, vertical=False):
         """
         Driver for cascading MAX7219 8x8 LED matrices.
 
@@ -53,6 +53,12 @@ class Matrix8x8:
         self.cs.init(cs.OUT, True)
         self.buffer = bytearray(8 * num)
         self.num = num
+        self.vertical = vertical
+        if vertical:
+            format = framebuf.MONO_VLSB
+        else:
+            format = framebuf.MONO_HLSB
+        self.format = format
         fb = framebuf.FrameBuffer(self.buffer, 8 * num, 8, format)
         self.framebuf = fb
         # Provide methods for accessing FrameBuffer graphics primitives. This is a workround
@@ -92,8 +98,21 @@ class Matrix8x8:
         self._write(_INTENSITY, value)
 
     def show(self):
+        if self.vertical:
+            self._vshow()
+        else:
+            self._hshow()
+
+    def _hshow(self):
         for y in range(8):
             self.cs(0)
             for m in range(self.num):
                 self.spi.write(bytearray([_DIGIT0 + y, self.buffer[(y * self.num) + m]]))
+            self.cs(1)
+
+    def _vshow(self):
+        for y in range(8):
+            self.cs(0)
+            for m in range(self.num):
+                self.spi.write(bytearray([_DIGIT0 + y, self.buffer[y + m*8]]))
             self.cs(1)
